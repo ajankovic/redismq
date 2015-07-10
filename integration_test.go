@@ -238,6 +238,14 @@ func (suite *TestSuite) TestGetFailed(c *C) {
 	c.Check(err, Not(Equals), nil)
 }
 
+// should unblock after timeout
+func (suite *TestSuite) TestGetTo(c *C) {
+	p, err := suite.consumer.GetTo(1)
+	c.Assert(err, NotNil)
+	c.Assert(err, Equals, redis.Nil)
+	c.Assert(p, IsNil)
+}
+
 // should handle multiple queues
 func (suite *TestSuite) TestSecondQueue(c *C) {
 	secondQueue := CreateQueue(redisHost, redisPort, redisPassword, redisDB, "teststuff2")

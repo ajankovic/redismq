@@ -13,12 +13,21 @@ type Consumer struct {
 	Queue *Queue
 }
 
-// Get returns a single package from the queue (blocking)
+// Get returns a single package from the queue (blocking).
 func (consumer *Consumer) Get() (*Package, error) {
 	if consumer.HasUnacked() {
 		return nil, fmt.Errorf("unacked Packages found")
 	}
-	return consumer.unsafeGet()
+	return consumer.unsafeGet(0)
+}
+
+// GetTo returns a single package from the queue (blocking).
+// to is read timeout in number of seconds; if 0 it will block forever.
+func (consumer *Consumer) GetTo(to int64) (*Package, error) {
+	if consumer.HasUnacked() {
+		return nil, fmt.Errorf("unacked Packages found")
+	}
+	return consumer.unsafeGet(to)
 }
 
 // NoWaitGet returns a single package from the queue (returns nil, nil if no package in queue)
@@ -197,11 +206,11 @@ func (consumer *Consumer) parseRedisAnswer(answer *redis.StringCmd) (*Package, e
 	return p, nil
 }
 
-func (consumer *Consumer) unsafeGet() (*Package, error) {
+func (consumer *Consumer) unsafeGet(to int64) (*Package, error) {
 	answer := consumer.Queue.redisClient.BRPopLPush(
 		queueInputKey(consumer.Queue.Name),
 		consumerWorkingQueueKey(consumer.Queue.Name, consumer.Name),
-		0,
+		to,
 	)
 	consumer.Queue.incrRate(
 		consumerWorkingRateKey(consumer.Queue.Name, consumer.Name),
